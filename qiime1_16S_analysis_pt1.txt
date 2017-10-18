@@ -1,0 +1,50 @@
+############################################################
+############################################################
+# Maria Stalteri
+# 02/10/2017
+# qiime1_16S_analysis_pt1.txt
+#
+############################################################
+############################################################
+# Analysing 16S data with Qiime1, Part 1
+# 
+# Starting with PE Illumina MiSeq data that has already been
+# demultiplexed, and there is no barcodes file.
+#
+############################################################
+# 1. Start the qiime1 environment (Qiime 1.9.1).
+
+$ source activate qiime1
+
+############################################################
+# 2. Extract the barcodes from the fastq header lines
+#    using extract_barcodes.py
+
+(qiime1)$ extract_barcodes.py \
+          --input_type barcode_in_label \
+          --char_delineator "new_bc=" \
+          -f   R1.fastq \
+          --bc1_len 12 \
+          -o parsed_barcodes/
+
+############################################################  
+# 3. Make a mapping file, map.tsv.
+#    The file should be tab-delimited, and there are
+#    certain fields that are compulsory.
+#    See the qiime1 webpages:
+
+# Example of a map.tsv file with details for one sample.
+(qiime1)$ more map.tsv
+
+#SampleID  BarcodeSequence  LinkerPrimerSequence SampleType  Description
+Sample1    CAGTGATCCTAG     GTGCCAGCMGCCGCGGTAA  fecal       sample1
+
+############################################################
+# 4. validate the mapping file
+
+
+############################################################
+# 5. Install ea-utils if not already installed.
+#    The fastq-join algorithm used by qiime1 for joining PE 
+#    reads is part of ea-utils.
+
