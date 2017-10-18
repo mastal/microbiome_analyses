@@ -1,0 +1,105 @@
+# Maria Stalteri
+# 13/09/2017
+# Illumina_16S_sequences.txt
+
+# trying to find out what adapters/barcodes
+# are in the Cornell 16S microbiome samples.
+
+# Have already figured out they are TruSeq v2.
+# see Caporaso 2012 suppl. materials for the design.
+# 12bp single-index barcode should be on reverse strand;
+
+# List of possible adapters/linkers, etc and 
+# rev comp of all the sequences:
+
+From Caporaso 2012:
+Forward strand, PCR primer, 515F:
+# 1. 5' Illumina adapter (29 bp, ends ACAC)
+AATGATACGGCGACCACCGAGATCTACAC
+# the rev comp
+GTGTAGATCTCGGTGGTCGCCGTATCATT 
+# 2. Forward primer pad  (10bp)
+TATGGTAATT 
+# the rc
+AATTACCATA
+# 3. Forward primer linker (2bp) 
+GT
+# rc
+AC 
+# 4. Forward primer (19 bp, 1 degenerate pos, 2 variants)
+GTGCCAGCMGCCGCGGTAA
+        *
+# Perl regex version
+GTGCCAGC[AC]GCCGCGGTAA
+# rc of regex version
+TTACCGCGGC[GT]GCTGGCAC 
+Reverse strand, PCR primer, 806R (806rcbc0):
+# 1. Rev com of 3' Illumina adapter
+CAAGCAGAAGACGGCATACGAGAT
+# rev com of rev com
+ATCTCGTATGCCGTCTTCTGCTTG 
+# 2. one example of 12bp barcode
+TCCCTTGTCTCC 
+# rc of barcode
+GGAGACAAGGGA
+# 3. Reverse primer pad (10bp)
+AGTCAGTCAG
+# rc of reverse primer pad
+CTGACTGACT
+# 4. Reverse primer linker (2bp)
+CC
+# rc of rev. primer linker
+GG 
+# 5. Reverse primer (20bp, 3 degenerate pos, 18 variants)
+GGACTACHVGGGTWTCTAAT
+       **    *
+#   Perl regex version
+GGACTAC[ACT][ACG]GGGT[AT]TCTAAT
+# rev com of perl regex
+ATTAGA[AT]ACCC[CGT][AGT]GTAGTCC
+# ================================ #
+# IUPAC nucleotide codes:
+https://www.bioinformatics.org/sms/iupac.html
+H - A or C or T (not G)
+V - A or C or G (not T)
+W - A or T 
+so 3*3*2 possibilities = 18 variations;
+M - A or C (2 possibilities)
+B - C or G or T (not A)
+D - A or G or T (not C)
+# ================================ #
+####################################
+# Sequencing primers:
+# Read 1 sequencing primer:
+1, Forward primer pad
+2, Forward primer linker
+3, Forward primer
+TATGGTAATT GT GTGCCAGCMGCCGCGGTAA (31bp,10+2+19)
+# Perl regex version
+TATGGTAATTGTGTGCCAGC[AC]GCCGCGGTAA
+# rc of Perl regex version
+TTACCGCGGC[GT]GCTGGCACACAATTACCATA
+# Read 2 sequencing primer:
+1, Reverse primer pad
+2, Reverse primer linker
+3, Reverse primer
+AGTCAGTCAG CC GGACTACHVGGGTWTCTAAT
+                     **    *
+# perl regex version
+AGTCAGTCAGCCGGACTAC[ACT][ACG]GGGT[AT]TCTAAT
+# rc of perl regex version
+ATTAGA[AT]ACCC[CGT][AGT]GTAGTCCGGCTGACTGACT
+# Index sequence primer (RC of R2 seq primer):
+1, RC of reverse primer 
+1, RC of reverse primer linker
+1, RC of reverse primer pad
+ATTAGAWACCCBDGTAGTCC GG CTGACTGACT
+      *    **
+# perl regex version
+# rc of Index seq primer, regex version
+
+###################################################
+# Right, so this establishes that the index (12bp barcode)
+# is read in a separate read, and given in a separate
+# barcodes file by Illumina's usual convention.
+###################################################
