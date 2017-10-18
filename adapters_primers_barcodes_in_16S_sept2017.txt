@@ -1,0 +1,95 @@
+##################################################
+##################################################
+# Maria Stalteri
+# 14/09/2017
+# adapters_primers_barcodes_in_16S_sept2017.txt
+#
+##################################################
+##################################################
+# Analysis of 16S V4 microbiome samples run on the
+# Illumina MiSeq according to the procedure of 
+# Caporaso et al, 2012.
+#
+# This is a list of the various adapter, primer
+# and barcode sequences that you get in the
+# reads when the insert is shorter than the 
+# read length, and as usual for Illumina sequencing,
+# you read into the adapter sequences.
+#
+# The Caporaso paper is here:
+http://www.nature.com/ismej/journal/v6/n8/full/ismej20128a.html
+
+# The supplementary materials file with the 
+# adapter/primer/linker barcode sequences is here:
+https://images.nature.com/full/nature-assets/ismej/journal/v6/n8/extref/ismej20128x2.txt
+#
+# see also the 16S Illumina Amplicon Protocol on the
+# Earth Microbiome webpages.
+http://www.earthmicrobiome.org/protocols-and-standards/16s/
+
+# other publications, using dual indexing methods are:
+# Fadrosh et al, 2014:
+https://microbiomejournal.biomedcentral.com/articles/10.1186/2049-2618-2-6
+
+# Kozich et al, 2013:
+http://aem.asm.org/content/79/17/5112.full.pdf
+
+# a recent triple-indexing method, Muinck et al., 2017.
+https://microbiomejournal.biomedcentral.com/track/pdf/10.1186/s40168-017-0279-1?site=microbiomejournal.biomedcentral.com
+
+# see also Jonathan Eisen's lab, although they say they
+# now use the Caporaso/Earth Microbiome method:
+https://phylogenomics.me/protocols/16s-pcr-protocol/
+
+# Illumina MiSeq 16S library Prep (?2015):
+# (Illumina Technical Note 15044223). Illumina. 2013. 
+https://support.illumina.com/documents/documentation/chemistry_documentation/16s/16s-metagenomic-library-prep-guide-15044223-b.pdf 
+
+# Benchmarking study of different 16S protocols:
+https://bmcgenomics.biomedcentral.com/track/pdf/10.1186/s12864-015-2194-9?site=bmcgenomics.biomedcentral.com
+
+###################################################
+###################################################
+# A. Adapters/primers/barcodes found in R1 of PE reads.
+#
+# V4 primers are 515F and 806R.
+# Barcodes are 12-bp and are on one strand only.
+#
+# In 5' to 3' direction in the reads:
+# 1. The rRNA sequence.
+#    When the insert is shorter than the read length,
+#    then you read into adapters/primers/etc. as below:
+# 2. Reverse complement of 20-bp degenerate reverse
+#    (806R) primer
+#    ATTAGA[AT]ACCC[CGT][AGT]GTAGTCC    
+# 3. Reverse complement of 2-bp reverse primer linker
+#    GG  
+# 4. Reverse complement of 10-bp reverse primer pad
+#    CTGACTGACT
+# 5. The 12-bp barcode, as given in fastq header
+#    GCTAAGAGAGTA (one example of 12-bp barcode)
+# 6. the 3' Illumina adapter (TruSeq2), 24 bp
+#    ATCTCGTATGCCGTCTTCTGCTTG
+# 7. poly A or other flowcell sequences
+#
+#####################################################
+#####################################################
+# B. Adapters/primers/barcodes found in R2 of PE reads.
+#
+# In 5' to 3' direction in the reads:
+# 1. The rRNA sequence.
+#    When the insert is shorter than the read length,
+#    then you read into adapters/primers/etc. as below:
+# 2. Reverse complement of the 19-bp degenerate forward 
+#     (515F) primer
+#    TTACCGCGGC[GT]GCTGGCAC 
+# 3. Reverse complement of the 2-bp forward primer linker 
+#    AC
+# 4. Reverse complement of the 10-bp forward primer pad
+#    AATTACCATA
+# 5. Reverse complement of the 5' Illumina adapter, 29 bp    
+#    GTGTAGATCTCGGTGGTCGCCGTATCATT
+# 6. poly A or other flow cell sequences
+#
+#######################################################
+#######################################################
