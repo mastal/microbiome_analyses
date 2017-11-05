@@ -1,7 +1,7 @@
 ############################################################
 ############################################################
 # Maria Stalteri
-# 02/10/2017
+# 05/11/2017
 # qiime1_16S_analysis_pt1.txt
 #
 ############################################################
@@ -135,7 +135,7 @@ https://github.com/ExpressionAnalysis/ea-utils/blob/wiki/Compiling.md
  
 # 5E. Install fastq-join by adding the path to it to your PATH.
 # 
-#     Edit the .bash_profile file in you home directory.
+#     Edit the .bash_profile file in your home directory.
 
  PATH=$PATH:$HOME/path/to/ExpressionAnalysis-ea-utils-bd148d4/clipper
 
