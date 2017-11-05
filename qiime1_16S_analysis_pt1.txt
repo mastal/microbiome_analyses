@@ -12,13 +12,15 @@
 # demultiplexed, and there is no barcodes file.
 #
 ############################################################
+############################################################
 # 1. Start the qiime1 environment (Qiime 1.9.1).
 
 $ source activate qiime1
 
 ############################################################
+############################################################
 # 2. Extract the barcodes from the fastq header lines
-#    using extract_barcodes.py
+#    using extract_barcodes.py.
 
 (qiime1)$ extract_barcodes.py \
           --input_type barcode_in_label \
@@ -27,11 +29,43 @@ $ source activate qiime1
           --bc1_len 12 \
           -o parsed_barcodes/
 
+############################################################
 ############################################################  
 # 3. Make a mapping file, map.tsv.
+#
 #    The file should be tab-delimited, and there are
 #    certain fields that are compulsory.
 #    See the qiime1 webpages:
+
+http://qiime.org/documentation/file_formats.html#metadata-mapping-files
+
+# Column headers must start with a letter.
+# Only word characters (A-Z, a-z, 1-9, underscore) are allowed
+# in column headers.
+# (What about zero, '0'?)
+
+# Header for first column must be '#SampleID'.
+# Sample IDs must be unique and contain only
+# word characters and '.'.
+
+# Second column header must be 'Barcode Sequence'.
+# Only IUPAC DNA characters are allowed.
+
+# Third column header must be 'LinkerPrimerSequence'.
+# Primer used to amplify the sample, IUPAC DNA characters only.
+
+# Other optional columns must be metadata columns,
+# assumed to be categorical data, and contain at least
+# 2 unique values. 'NA' should be used for missing data.
+# See the qiime webpage.
+
+# The last column must be named 'Description'.
+
+# BarcodeSequence and LinkerPrimerSequence fields can be left
+# blank, if not applicable, but the column headers must
+# still be present.
+# See below for special parameters to use when validating
+# the mapping file.
 
 # Example of a map.tsv file with details for one sample.
 (qiime1)$ more map.tsv
@@ -40,11 +74,88 @@ $ source activate qiime1
 Sample1    CAGTGATCCTAG     GTGCCAGCMGCCGCGGTAA  fecal       sample1
 
 ############################################################
-# 4. validate the mapping file
+############################################################
+# 4. Validate the mapping file.
 
+# Parameters to use if the BarcodeSequence or LinkerPrimerSequence
+# columns are left blank:
 
+# To disable barcode and primer testing use -b and -p
+# with validate_mapping_file.py.
+
+(qiime1)$ validate_mapping_file.py \
+          -m map.tsv \
+          -o validate_mapping_file_output/ 
+
+# This creates a log file, a 'corrected_mapping' file,
+# and a html file.
+
+############################################################
 ############################################################
 # 5. Install ea-utils if not already installed.
 #    The fastq-join algorithm used by qiime1 for joining PE 
 #    reads is part of ea-utils.
 
+#  The ea-utils webpage:
+https://expressionanalysis.github.io/ea-utils/
+
+#  References for ea-utils:
+#   Erik Aronesty (2011). ea-utils : 
+#   "Command-line tools for processing biological sequencing data"; 
+#   https://github.com/ExpressionAnalysis/ea-utils
+
+#   Erik Aronesty (2013). TOBioiJ : 
+#   "Comparison of Sequencing Utility Programs", 
+#    DOI:10.2174/1875036201307010001
+#    https://benthamopen.com/contents/pdf/TOBIOIJ/TOBIOIJ-7-1.pdf
+
+# 5A. Download the tar.gz file,
+      ExpressionAnalysis-ea-utils-1.04.807-18-gbd148d4.tar.gz
+
+# 5B. Untar the file.
+   
+   $ tar xvzf  ExpressionAnalysis-ea-utils-1.04.807-18-gbd148d4.tar.gz
+ 
+# 5C. Read the instructions for compiling and installing.
+
+https://github.com/ExpressionAnalysis/ea-utils/blob/wiki/Compiling.md
+
+# 5D. Attempt to compile.
+
+      $ cd ExpressionAnalysis-ea-utils-bd148d4
+      $ cd clipper
+      $ make
+	
+# Make failed, but the binary for fastq-join is in the directory,
+# and it appears to run, so am assuming the problem is with some
+# other parts of the software that I won't need for now.
+
+# Running this on a cluster, so not sure that I can update any
+# required libraries to get ea-utils to compile.
+ 
+# 5E. Install fastq-join by adding the path to it to your PATH.
+# 
+#     Edit the .bash_profile file in you home directory.
+
+ PATH=$PATH:$HOME/path/to/ExpressionAnalysis-ea-utils-bd148d4/clipper
+
+###############################################################
+###############################################################
+# 6. If it is a PE experiment, join the R1 and R2 (forward and reverse) 
+#    reads with fastq-join.
+
+# Need to update the barcodes file to remove the reads that
+# don't get merged. Use the -b parameter.
+
+# Set a minimum overlap for the read pair.
+
+(qiime1)$ join_paired_ends.py \
+         -f R1.fastq \ 
+         -r R2.fastq \
+         -o fastq-join_joined/ \
+         -b parsed_barcodes/barcodes.fastq \
+         --min_overlap 200
+
+
+###############################################################
+###############################################################
