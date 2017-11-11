@@ -1,0 +1,81 @@
+###########################################################
+###########################################################
+# Maria Stalteri
+# 10/11/2017
+# qiime1_16S_analysis_pt2.txt
+#
+###########################################################
+###########################################################
+# See pt1 for steps from barcode_extraction to 
+# fastq_join.
+#
+###########################################################
+###########################################################
+# 7. Quality filtering of reads with split_libraries_fastq.py.
+#
+#    Note that this protocol is for files that have already
+#    been demultiplexed before running qiime1.
+#
+#    See Bokulich et al, 2013, for an explanation of the 
+#    quality filtering methods used in qiime1.
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3531572/#SD1
+
+#    See the qiime1 webpage for split_libraries_fastq.py
+http://qiime.org/scripts/split_libraries_fastq.html
+
+# Using quality filter Phred >= 25:
+(qiime1)$ split_libraries_fastq.py \
+          -i fastq-join_joined/fastqjoin.join.fastq \
+          --sample_ids Sample_2 \
+          -o sl_out_Sample_2 \
+          -q 24 \
+          -b fastq-join_joined/fastqjoin.join_barcodes.fastq \
+          -m map.tsv \
+          --store_qual_scores
+
+#    This also produces a file called histograms.txt, which gives
+#    a length distribution of the sequences that passed quality
+#    filtering, and a split_library_log.txt file which gives 
+#    useful statistics.
+#
+#    Note that the seqs.qual file produced gives numeric base 
+#    qualities.
+#
+#############################################################
+#############################################################
+# 8. Run count_seqs.py.
+
+# This also gives mean and sd of sequence lengths.
+
+(qiime1)$ count_seqs.py \
+          -i sl_out_Sample_2/seqs.fna
+
+#############################################################
+#############################################################
+# 9. Do otu_picking. Use open-reference OTU picking, since
+#    it is currently the recommended method.
+
+#    See Rideout et al., 2014 for a discussion of OTU picking.
+https://peerj.com/articles/545/
+
+#    Run pick_open_reference_otus.py.
+#    This produces 3 OTU tables in biom format.
+
+(qiime1)$ pick_open_reference_otus.py \
+          -o otus/ 
+          -i sl_out_Sample_2/seqs.fna
+
+
+#############################################################
+#############################################################
+# 10. Manipulate biom files.
+
+#############################################################
+#############################################################
+# 11. Exit the qiime1 environment.
+
+(qiime1)$ source deactivate
+
+#############################################################
+#############################################################
