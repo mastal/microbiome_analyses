@@ -1,0 +1,127 @@
+#############################################################
+#############################################################
+# Maria Stalteri
+# 24/11/2017
+# manipulating_biom_files_in_qiime1.txt
+# 
+#############################################################
+#############################################################
+# 1. Get summary stats on the file's contents,
+#    including otu counts per sample, max and min counts.
+#
+# See the biom format webpages:
+http://biom-format.org/documentation/summarizing_biom_tables.html
+
+# As usual, start up the anaconda qiime1 environment first:
+$ source activate qiime1
+
+(qiime1)$ biom summarize-table \
+          -i otu_table.biom  \
+          -o otu_table_summary.txt
+
+(qiime1)$ source deactivate
+
+#############################################################
+#############################################################
+# 2. Filter OTUs from the biom format OTU table.
+#
+#    This will make the table smaller, which is important
+#    because processing biom files can use up large amounts
+#    of computer memory.
+#
+#    This filtering step made the biggest difference to the
+#    size of the otu table.
+#
+# See the qiime1 webpages:
+http://qiime.org/scripts/filter_otus_from_otu_table.html
+
+# Remove otus with fewer than 2 counts in the whole table.
+(qiime1)$ filter_otus_from_otu_table.py \
+          -i otu_table.biom  \
+          -o otu_table_no_singletons.biom \
+          -n 2
+
+#############################################################
+#############################################################
+# 3. Filter samples from OTU table by ID. 
+#
+#    This can be done using a list of sample IDs to retain,
+#    or a list of sample IDs to remove.
+#
+#    Note that the mapping file map.tsv can also be filtered
+#    to the resulting set of sample IDs.
+# 
+#    fp stands for file path.
+# 
+# See the qiime1 webpages:
+http://qiime.org/scripts/filter_samples_from_otu_table.html
+
+# 3a. Filter OTU table with a list of sample IDs to be retained.
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o filtered_otu_table_no_singletons.biom \
+          --sample_id_fp ids.txt
+
+# 3b. Filter OTU table with a list of sample IDs to be removed.
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o filtered_otu_table_no_singletons.biom \
+          --sample_id_fp ids.txt  \
+          --negate_sample_id_fp
+
+#############################################################
+#############################################################
+# 4. Filter samples from OTU table by abundance (OTU counts).
+#
+#    I have not tried this myself yet,
+#    although one of the files that I have used had been
+#    filtered to remove samples with fewer than 10K counts.
+#
+# See the qiime1 webpages:
+http://qiime.org/scripts/filter_samples_from_otu_table.html
+
+# Filter out samples with fewer than 10K observations.
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o otu_table_no_singletons_no_low_coverage_samples.biom \
+          -n 10000
+
+#############################################################
+#############################################################
+# 5. Convert biom file to text file.
+#
+#    This can be used to convert a biom format OTU table to
+#    text, or to convert a text OTU table to biom format.
+#
+#    Biom format v2 is HDF5.
+#    Previous version, biom format v1 was JSON.
+#
+#    Filter otus and samples from the biom table before
+#    attempting to convert a biom otu table to text, as
+#    a file with thousands of samples can take 100 Gb
+#    of computer memory or more, even though the biom 
+#    file is only a few hundred Mb.     
+#
+# See the biom format webpages:
+http://biom-format.org/documentation/biom_conversion.html
+
+(qiime1)$ biom convert \
+          -i otu_table.biom \
+          -o otu_table_from_biom.txt \
+          --table-type="OTU table"  \
+          --to-tsv
+
+#    So far, I have only had success doing the biom-to-text
+#    conversion with qiime1 for a small biom file with only 
+#    8 samples.
+#    With larger files containing several thousand samples,
+#    qiime1 throws MemoryErrors, even after I have filtered
+#    out otus with few counts.
+#
+#    I will update this if I get it to work.
+#    Meanwhile, I have been using the R biomformat package,
+#    as described in the biom_to_text.R file in this
+#    repository.
+#
+###############################################################
+###############################################################    
