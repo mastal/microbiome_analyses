@@ -4,6 +4,8 @@
 # 24/11/2017
 # manipulating_biom_files_in_qiime1.txt
 # 
+# revised 08/12/2017
+# 
 #############################################################
 #############################################################
 # 1. Get summary stats on the file's contents,
@@ -88,7 +90,30 @@ http://qiime.org/scripts/filter_samples_from_otu_table.html
 
 #############################################################
 #############################################################
-# 5. Convert biom file to text file.
+# 5. Sort OTU table. 
+#
+#    The default sort is by SampleID, an alphanumeric case-
+#    insensitive sort.
+#    Samples may also be sorted based on order in a file,
+#    or fields in a mapping file.           
+#
+# See the qiime1 webpages:
+http://qiime.org/scripts/sort_otu_table.html
+
+#    This step may need lots of memory, and qiime gave
+#    a Memory Error the first time I ran it.
+#    The solution was to request more memory.
+#    It worked with 100G.
+$ qrsh -q HighMem.q  -l h_vmem=100G 
+
+# Sort otu table by SampleID.
+(qiime1)$ sort_otu_table.py \
+          -i otu_table.biom \
+          -o otu_table_sorted.biom
+
+#############################################################
+#############################################################
+# 6. Convert biom file to text file.
 #
 #    This can be used to convert a biom format OTU table to
 #    text, or to convert a text OTU table to biom format.
@@ -104,6 +129,9 @@ http://qiime.org/scripts/filter_samples_from_otu_table.html
 #
 # See the biom format webpages:
 http://biom-format.org/documentation/biom_conversion.html
+
+# Request 100 Gb of memory.
+$ qrsh -q HighMem.q -l h_vmem=100G 
 
 (qiime1)$ biom convert \
           -i otu_table.biom \
@@ -122,6 +150,12 @@ http://biom-format.org/documentation/biom_conversion.html
 #    Meanwhile, I have been using the R biomformat package,
 #    as described in the biom_to_text.R file in this
 #    repository.
+#
+#    Updated 08/12/2017
+#    This step uses lots of memory, close to 100G on R.
+#    The solution was the same as for Step 5, above,
+#    request 100G of memory, and then the command ran
+#    without any problems.
 #
 ###############################################################
 ###############################################################    
