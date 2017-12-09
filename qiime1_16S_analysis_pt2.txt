@@ -69,7 +69,104 @@ https://peerj.com/articles/545/
 
 #############################################################
 #############################################################
-# 10. Manipulate biom files.
+# 10. Filter and sort the biom format OTU tables.
+
+#     See the file manipulating_biom_files_in_qiime1.txt 
+#     in this directory.
+
+# 10A. Get a summary of the counts per sample in the otu table
+       with biom summarize-table.
+
+(qiime1)$ biom summarize-table \
+          -i otu_table.biom \
+          -o otu_table_summary.txt
+
+# 10B. Make the file smaller by removing otus with fewer than
+#      2 counts across the whole table with 
+#      filter_otus_from_otu_table.py
+
+(qiime1)$ filter_otus_from_otu_table.py \
+          -i otu_table.biom \
+          -o otu_table_no_singletons.biom \
+          -n 2
+
+# 10C. A summary of the filtered table would be useful,
+#      run biom summarize-table on the filtered biom file.
+
+# 10D. Filter the table using a list of sample IDs of
+#      samples to keep with filter_samples_from_otu_table.py.
+
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o filtered_otu_table_no_singletons.biom \
+          --sample_id_fp ids.tx
+ 
+# 10E. Filter the table using a list of sample IDs of samples
+#      to filter out.
+
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o filtered_otu_table_no_singletons.biom \
+          --sample_id_fp ids.txt \
+          --negate_sample_id_fp
+
+# 10F. Run biom summarize-table on the filtered biom file, 
+#      this will tell you how many samples ramin in the
+#      filtered table.
+
+# 10G. Remove samples with less than a minimum number of
+#      counts, say 10K.
+
+(qiime1)$ filter_samples_from_otu_table.py \
+          -i otu_table_no_singletons.biom \
+          -o otu_table_no_singletons_no_low_coverage_samples.biom \
+          -n 10000
+
+# 10H. Run biom summarize-table again.
+
+# 10I. Sort the biom table by SampleID with sort_otu_table.py.
+#      This step may require lots of memory, so request 100 Gb
+#      of memory before starting the qiime environment.
+#      (This was for a file containing 300K OTUs and 2700 samples).
+
+$ qrsh -q HighMem.q -l h_vmem=100G
+
+(qiime1)$ sort_otu_table.py \
+          -i otu_table.biom \
+          -o otu_table_sorted.biom
+
+# 10J. Convert the filtered and sorted biom table to text.
+#      This step may be done in qiime1 or in R.
+
+# 10J1. Using qiime1.
+#       Again, as for step 10I, request 100 Gb of memory 
+#       before starting qiime.
+
+$ qrsh -q HighMem.q -l h_vmem=100G
+
+(qiime1)$ biom convert \
+          -i otu_table_filtered_sorted.biom \
+          -o otu_table_filtered_sorted_from_biom.txt \
+          --table-type="OTU table" \
+          --to-tsv
+
+# 10J2. Using R.
+#       Exit the qiime1 environment, see Step 11, below.
+
+#       See the file biom_to_text.R in this directory.
+#       This is a memory intensive step, and R gave Cstack
+#       memory errors.
+#       To prevent this, run the following before starting
+#       the R session:
+
+$ ulimit -s
+# 8192
+
+# Change the limit.
+# This will take effect only for the one session.
+$ ulimit -s 32000
+
+# Follow the procedure in biom_to_text.R 
 
 #############################################################
 #############################################################
