@@ -1,0 +1,391 @@
+#########################################################
+#########################################################
+# Maria Stalteri
+# 28/04/2018
+# maria_urobiome_pipeline_code_pt1_20180428bg.txt
+#
+# revised 17/05/2018
+#
+#########################################################
+#########################################################
+# I usually run this on an interactive shell on a cluster.
+
+$ qrsh -l h_vmem=70G
+
+# Or, request a specific queue.
+$ qrsh -q HighMemShortterm.q -l h_vmem=70G
+
+#########################################################
+#########################################################
+# 1. Use FastQC to get various diagnostic quality control
+#    plots for the reads.
+# 
+# FastQC was written by Simon Andrews from the Bioinformatics 
+# group at the Babraham Institute (near Cambridge).
+
+https://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+# I like to run FastQC with options --nogroup and -k 10
+# in order to see the base qualities, etc at each position
+# in the read, but this uses a lot of memory, and I have
+# to modify the fastqc perl script, and increase the -Xmx
+# parameter for the amount of memory Java is allowed to use.
+# I have modified -Xmx from 250m to 2000m or nore.
+# This is not necessary when running FastQC with the default
+# settings.
+#
+# FastQC's default behaviour is to put the output files
+# in the same directory as the input fastq files.
+# If you want the output to go somewhere else you have to
+# create the directory, and then specify it with -o,
+# FastQC will not create the directory if it doesn't exist.
+
+$ mkdir 44528_raw_fastq_fastqc
+
+# 1a. Running FastQC with --nogroup and -k 10.
+ 
+$ /Path/to/FastQC/fastqc \
+  --nogroup \ 
+  -k 10 \
+  -o 44528_raw_fastq_fastqc/  
+  /Path/to/FASTQ/44528/Urobiome_II_2_13-17_S1_L001_R1_001.fastq
+ 
+$ /Path/to/FastQC/fastqc \
+  --nogroup \ 
+  -k 10 \
+  -o 44528_raw_fastq_fastqc/
+  /Path/to/FASTQ/44528/Urobiome_II_2_13-17_S1_L001_R2_001.fastq
+
+# 1b. Running FastQC with default parameters.
+
+$ /Path/to/FastQC/fastqc \
+  -o 44528_raw_fastq_fastqc/
+  /Path/to/FASTQ/44528/Urobiome_II_2_13-17_S1_L001_R1_001.fastq
+ 
+$ /Path/to/FastQC/fastqc \
+  -o 44528_raw_fastq_fastqc/
+  /Path/to/FASTQ/44528/Urobiome_II_2_13-17_S1_L001_R2_001.fastq
+
+########################################################
+########################################################
+# 2. Use Trimmomatic to remove adapters and low quality
+#    bases or regions.
+#
+# Trimmomatic was written by Tony Bolger from Bjorn Usadell's
+# lab in Germany.
+
+http://www.usadellab.org/cms/?page=trimmomatic
+
+# I didn't try to do any adapter trimming on the urobiome
+# data, because the reads had already been trimmed, probably
+# by the MiSeq software, and the base qualities looked quite
+# good on the FastQC plots.
+#
+# I ran trimmomatic one step at a time in the first instance,
+# because I wanted to see the effect of each step.
+# The process could be run all as one step.
+
+# I usually drop the reads that end up unpaired after trimmomatic
+# from further analysis.
+
+# The sequence of operations I used on the urobiome data was
+# as follows:
+# a. CROP:150  Remove base 151 from the 3' end.
+# b. MINLEN:50 Remove reads shorter than 50 bp.
+# c. LEADING:10 TRAILING:10 Remove bases with phred qualities 
+#    lower than 10 from the 5' and 3' ends of the reads.
+# d. SLIDINGWINDOW:4:25 Truncate the reads at the 3' end when
+     the average base quality over a 4-base widow is < 25.
+# e. MINLEN:100 Remove reads shorter than 100 bp.
+
+# 2a. Run trimmomatic with CROP:150 option,
+#     to remove base 151 from the reads.
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \ 
+  PE \
+  -threads 14 \
+  -phred33 \
+  -trimlog 44528_CR150_log.txt \
+  ~/Path/to/Urobiome_II_2_13-17_S1_L001_R1_001.fastq \
+  ~/Path/to/Urobiome_II_2_13-17_S1_L001_R2_001.fastq \
+  44528_CROP150_R1P.fastq \
+  44528_CROP150_R1U.fastq \
+  44528_CROP150_R2P.fastq \
+  44528_CROP150_R2U.fastq \
+  CROP:150
+
+# All reads should survive this step and remain paired,
+# so the R1U.fastq and R2U.fastq output files should be empty.
+
+# 2b. Run Trimmomatic with MINLEN:50 to remove very
+#     short reads from further analysis.
+#     The FastQC output indicated the reads (presumably
+#     trimmed by the MiSeq) ranged in length from 1 bp
+#     to 151 bp.
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \
+  PE \
+  -threads 16 \
+  -phred33 \
+  -trimlog 44530_CR150_ML50_log.txt \
+  44530_CROP150_R1P.fastq  \
+  44530_CROP150_R2P.fastq  \
+  44530_CR150_ML50_R1P.fastq  \
+  44530_CR150_ML50_R1U.fastq  \
+  44530_CR150_ML50_R2P.fastq  \
+  44530_CR150_ML50_R2U.fastq  \
+  MINLEN:50
+
+# After this and the remaining trimmomatic steps,
+# I will only use the paired output reads, R1P.fastq
+# and R2P.fastq in subsequent steps. 
+
+# 2c. Run Trimmomatic with options LEADING:10 TRAILING:10 
+#     to remove low quality bases from the 5' and 3' ends
+#     of the reads.
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \
+  PE \
+  -threads 16 \
+  -phred33 \
+  -trimlog 44530_CR150_ML50_LETR10_log.txt \
+  44530_CR150_ML50_R1P.fastq \
+  44530_CR150_ML50_R2P.fastq \
+  44530_CR150_ML50_LETR10_R1P.fastq \
+  44530_CR150_ML50_LETR10_R1U.fastq \
+  44530_CR150_ML50_LETR10_R2P.fastq \
+  44530_CR150_ML50_LETR10_R2U.fastq \
+  LEADING:10 \
+  TRAILING:10 
+
+# 2d. Run Trimmomatic with option SLIDINGWINDOW:4:25,
+#     which truncates reads where average base quality
+#     over a window of 4 bases is less than 25.
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \
+  PE \
+  -threads 16 \
+  -phred33 \
+  -trimlog 44530_CR150_ML50_LETR10_SLW_log.txt \
+  44530_CR150_ML50_LETR10_R1P.fastq \
+  44530_CR150_ML50_LETR10_R2P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_R1P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_R1U.fastq \
+  44530_CR150_ML50_LETR10_SLW425_R2P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_R2U.fastq \
+  SLIDINGWINDOW:4:25  
+
+# 2e. Run Trimmomatic with MINLEN:100, to remove reads
+#     shorter than 100 bp.
+#     Reads will have to be longer than 100 in order
+#     to merge successfully.
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \
+  PE \
+  -threads 16 \
+  -phred33 \
+  -trimlog 44530_CR150_ML50_LETR10_SLW425_ML100_log.txt \
+  44530_CR150_ML50_LETR10_SLW425_R1P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_R2P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_ML100_R1P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_ML100_R1U.fastq \
+  44530_CR150_ML50_LETR10_SLW425_ML100_R2P.fastq \
+  44530_CR150_ML50_LETR10_SLW425_ML100_R2U.fastq \
+  MINLEN:100
+
+# 2f. If running this routinely, it would probably
+#     make more sense to run all the trimmomatic
+#     steps in one go.
+#     If data hasn't already been trimmed, add an
+#     adapter removal step before all the other options.
+#     Also use the 'base' parameter, to avoid having to
+#     type the names of 6 files ...
+
+$ java -jar ~/Path/to/Trimmomatic-0.36/trimmomatic-0.36.jar \
+  PE \
+  -threads 16 \
+  -phred33 \
+  -trimlog 44530_trimmomatic_log.txt \
+  ~/Path/to/FASTQ/44530/44530_R1_001.fastq \
+  ~/Path/to/FASTQ/44530/44530_R2_001.fastq \
+  44530_trimmo_R1P.fastq \
+  44530_trimmo_R1U.fastq \
+  44530_trimmo_R2P.fastq \
+  44530_trimmo_R2U.fastq \
+  CROP:150 \
+  MINLEN:50 \
+  LEADING:10 \
+  TRAILING:10 \
+  SLIDINGWINDOW:4:25
+  MINLEN:100
+
+########################################################
+########################################################
+# 3. Run FastQC after each trimmomatic step.
+#    Run on each of the paired reads files.
+#    Can also run it on the unpaired reads files to see
+#    what the qualities etc look like.   
+#
+#    See Step 1.
+#
+########################################################
+########################################################
+# 4. Use BBTools to filter the Index reads fastq file to 
+#    only the paired reads that survived the Trimmomatic process.
+#
+# BBTools was written by Brian Bushnell at JGI, the Joint Genome
+# Institute in Walnut Creek, California.
+
+https://jgi.doe.gov/data-and-tools/bbtools/bb-tools-user-guide/
+
+# To demultiplex the reads with qiime1, you need to have the
+# index reads file in the same order as the R1/R2 files,
+# but it will be out of sync after some of the R1/R2 reads have
+# been removed by trimmomatic.
+
+# Use the repair.sh script of BBTools.
+# This should leave the R1/R2 fastq files as they are,
+# but remove reads from the Index fastq file.
+
+$ ~/Path/to/bbmap_v38_00/repair.sh \
+  in=~/Path/to/44522_trimmo/44522_trimmo_R1P.fastq \
+  in2=~/Path/to/FASTQ/44522_S1_L001_I1_001.fastq \
+  out=44522_trimmo_v1_bbmap_R1P.fastq \
+  out2=44522_Index_bbmap_filt_R1P_trimmo_v1.fastq \
+  repair
+
+##########################################################
+##########################################################
+# 5. Validate the mapping file with qiime1.
+#
+http://qiime.org/index.html
+
+#    Start qiime1.
+#    I run qiime1.9.2 with anaconda on the cluster.
+#    Anaconda is installed in my home directory.
+
+$ source activate qiime1
+
+#    Run validate_mapping_file.py
+#    Check the log to see any errors or warnings,
+#    and what corrections qiime1 has made to the
+#    mappings file.
+
+(qiime1) $ validate_mapping_file.py \
+> -m /Path/to/mapping_files/44528_mapping_file.txt \
+> -o 44528_validate_map_file_out
+
+###########################################################
+###########################################################
+# 6. Demultiplex the reads with qiime 1, Part 1.
+#    This protocol uses qiime1, but
+#    qiime1 doesn't seem to have a script for paired reads,
+#    try the demultiplexing method in qiime2.
+
+#    Use the parameters recommended by dada2 
+#    (see the dada2 tutorial FAQs) to prevent qiime1 doing
+#    any quality trimming of the reads.
+
+https://benjjneb.github.io/dada2/faq.html
+
+# The split_libraries_fastq.py parameters recommended
+# by the Earth Microbiome Project:
+
+http://www.earthmicrobiome.org/protocols-and-standards/initial-qiime-processing/
+
+# 6a. The forward reads.
+
+(qiime1) $ split_libraries_fastq.py \
+  -i 44522_trimmo_v1_bbmap_R1P.fastq \
+  -b 44522_Index_bbmap_filt_R1P_trimmo_v1.fastq \
+  --rev_comp_barcode \
+  --rev_comp_mapping_barcodes  \
+  -o 44522_trimmo_p0001_R1_sl_out/  \
+  -m mapping_files/44522_mapping_file.txt \
+  --store_demultiplexed_fastq \
+  -r 999 \
+  -n 999 \
+  -q 0  \
+  -p 0.0001 \
+  -v
+
+# 6b. The reverse reads.
+
+(qiime1) $ split_libraries_fastq.py \
+  -i 44522_CR150_ML50_LETR10v2_SW425_ML100_R2P.fastq \
+  -b 44522_Index_bbmap_filt_R1P_trimmo_v1.fastq \
+  --rev_comp_barcode \
+  --rev_comp_mapping_barcodes \
+  -o 44522_trimmo_p0001_R2_sl_out/ \
+  -m mapping_files/44522_mapping_file.txt \
+  --store_demultiplexed_fastq
+  -r 999 \
+  -n 999 \
+  -q 0   \
+  -p 0.0001 \
+  -v
+
+# See the output files split_library_log.txt and histograms.txt 
+# for useful run stats about the number of sequences processed, 
+# number of sequences dropped due to barcode not matching mappings
+# file, etc. 
+
+# Check that the number of sequences written (last line in the
+# log file), is the same for both R1 and R2, and that no reads
+# have been dropped, otherwise the reads in the R1 and R2 fastq files
+# may not be in the same order.
+# If R1 and R2 don't have the same numbe rof reads, this can
+# be fixed with BBTools, see Step 4.
+ 
+##########################################################
+##########################################################
+# 7.  Demultiplex with qiime1, Part 2.
+# 7a. The forward reads.
+
+# The problem with files output by 
+# split_sequence_file_on_sample_ids.py
+# is that they are named sample_name.fastq, and
+# don't have R1 or R2 in the name.
+
+(qiime1) $ split_sequence_file_on_sample_ids.py \
+  -i 44522_trimmo_p0001_R1_sl_out/seqs.fastq \
+  --file_type fastq \
+  -o out_sl_44522_trimmo_p0001_R1_fastq_by_sample
+
+# 7b. The reverse reads.
+(qiime1) $ split_sequence_file_on_sample_ids.py \
+  -i 44522_trimmo_p0001_R2_sl_out/seqs.fastq \
+  --file_type fastq \
+  -o out_sl_44522_trimmo_p0001_R2_fastq_by_sample
+
+# quit qiime
+(qiime1) $ source deactivate
+
+##########################################################
+##########################################################
+# 8. The reads have been trimmed with Trimmomatic, and
+#    demutlplexed using qiime1, and can now be imported into
+#    dada2.
+#
+#    The protocol continues in Pt2.
+#    The rest of this protocol follows the dada2 tutorial,
+#    v1.4, because the version of dada2 available under R-3.4.1
+#    on the cluster is v1.4.
+#    The latest version is v1.8.
+#
+###########################################################
+###########################################################
+#    To use R on the cluster:
+$ module add bioinformatics/R/3.4.1
+
+# start R
+$ R
+
+> library(dada2)
+> packageVersion("dada2")
+
+> ls()
+
+############################################################
+############################################################
+
