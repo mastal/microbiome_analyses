@@ -1,0 +1,391 @@
+#########################################################
+#########################################################
+# Maria Stalteri
+# 20/05/2018
+# maria_urobiome_pipeline_code_pt2_20180520.txt
+#
+#########################################################
+#########################################################
+# Analysis of 16S microbiome amplicons using dada2.
+# Part2. Continued from Pt1.
+#        Dada2 analysis in R.
+# Use dada2 after removing adapters and demultiplexing
+# the reads.
+#
+# This is adapted from the dada2 tutorials:
+https://benjjneb.github.io/dada2/tutorial.html
+
+# Use the version of the tutorial for the dada2 version
+# you are using.
+
+# start R
+$ R
+
+> library(dada2)
+> packageVersion("dada2")
+
+> ls()
+ 
+#########################################################
+#########################################################
+# 1.  Set up the paths to the directories with the files,
+#     and the list of file names for use with the dada2
+#     protocol.
+#
+#     I usually create a directory where I want the dada2
+#     output to go, and start R from that directory.
+#
+#     Unlike what dada2 expects, the R1 and R2 files
+#     demultiplexed with Qiime1 are in different directories,
+#     so the code has to be modified slightly.
+
+# Check which directory is the current directory.
+> getwd()
+
+# Specify the path to the R1 and R2 files.
+> path.R1<-"./out_sl_44528_p0001_R1_fastq_by_sample/"
+> path.R2<-"./out_sl_44528_p0001_R2_fastq_by_sample/"
+
+# Check that it has worked.
+> path.R1
+> path.R2
+
+# Check that R can see the fastq files.
+> list.files(path.R1)
+> list.files(path.R2)
+
+> fnFs<-sort(list.files(path.R1, pattern=".fastq"))
+> fnRs<-sort(list.files(path.R2, pattern=".fastq"))
+
+> fnFs
+> fnRs
+
+> length(fnFs)
+> length(fnRs)
+
+> head(fnFs)
+> head(fnRs)
+
+> tail(fnFs)
+> tail(fnRs)
+
+> sample.names <- sapply(strsplit(fnFs, ".fastq"), `[`, 1)
+
+> fnFs<-file.path(path.R1, fnFs)
+> fnFs
+
+> fnRs<-file.path(path.R2, fnRs)
+> fnRs
+
+###########################################################
+###########################################################
+# 2.   Plot quality profiles.
+#
+#      I prefer the FastQC base quality plots, but this is
+#      the way to do them with dada2.
+
+# Plot quality profiles for the forward reads from the first
+# two samples.
+> plotQualityProfile(fnFs[1:2])
+
+# Save the plots to a file, 
+# useful if working in an environment that doesn't allow 
+# X-forwarding.
+> png("dada2_qual_prof_44528_1and2_R1.png")
+> plotQualityProfile(fnFs[1])
+> dev.off()
+
+# Repeat plots for the R2 reads:
+# This makes plots for the R2 reads from samples 1, 2, and 570.
+> png("dada2_qual_prof_44528_1_2_570_R2.png")
+> plotQualityProfile(fnRs[c(1:2,570)])
+> dev.off()
+ 
+################################################################
+################################################################
+# 3.  Trim and filter the reads using dada2.
+
+# Dada2 creates a 'filtered' subdirectory for the output.
+> filt_path <- file.path(getwd(), "filtered")
+> filt_path
+
+> filtFs <- file.path(filt_path, paste0(sample.names, "_F_filt.fastq.gz"))
+> filtRs <- file.path(filt_path, paste0(sample.names, "_R_filt.fastq.gz"))
+  
+# This is the dada2 quality trimming step.
+# Remove the last base of Illumina reads if the rest of
+# the base qualities are OK or have already been quality trimmed.   
+> out_44528_dada2 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, 
+>           truncLen=c(150,150),
+>           maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
+>           compress=TRUE, multithread=TRUE) 
+      # On Windows set multithread=FALSE
+
+# R gives warnings about files with 0 reads remaining after the
+# filter and trim step.
+# This gives downstream problems, because files with 0 reads are
+# not written, but are still listed in the list of sample names.
+# My solution was to remove the names of the files with 0 reads
+# from the list of sample names, see below.
+
+# check the output from the filter and read step:
+# there are 2 columns, with numbers of reads,
+# 'reads.in' and 'reads.out'
+> dim(out_44528_dada2)
+
+> out_44528_dada2
+
+> head(out_44528_dada2)
+> tail(out_44528_dada2)
+
+# to get the fraction of reads surviving:
+# col1 is reads.in
+# col2 ia reads.out
+> sum(out_44528_dada2[,1])
+> sum(out_44528_dada2[,2])
+
+################################################################
+################################################################
+# 4.  Learn error rates.
+
+# Use negative indices to remove the files with 0 reads remaining.
+# Do this before running the learn error rates step.
+> filtFs<-filtFs[-29]
+> filtRs<-filtRs[-29]
+
+## Alternative code for when there is more than one file
+## that is not written because of 0 reads:
+## Save the old states, in case I need to get them back.
+#> old.filtFs<-filtFs
+#> old.filtRs<-filtRs
+
+## Get the indexes for the samples with 0 reads.
+#> which(out_44528_dada2[,2] == 0)
+#> inds.samples.to.remove<-c(28,158)
+
+## Now, remove the empty files.
+#> filtFs<-filtFs[-inds.samples.to.remove]
+#> length(filtFs)
+##
+#> filtRs<-filtRs[-inds.samples.to.remove]
+#> length(filtRs)
+## 
+## End of alternative code.
+
+# Learn the error rates for the forward reads.
+> errF <- learnErrors(filtFs, multithread=TRUE)
+
+# Repeat for the reverse reads:
+> errR <- learnErrors(filtRs, multithread=TRUE)
+
+# Plot the errors.
+> png("dada2_urobiome_44528_error_plots_R1.png")
+> plotErrors(errF, nominalQ=TRUE)
+
+# R gives warnings:
+# Warning messages:
+# 1: Transformation introduced infinite values in continuous y-axis
+# 2: Transformation introduced infinite values in continuous y-axis
+
+> dev.off()
+
+# Plot the reverse reads.
+> png("dada2_urobiome_44528_error_plots_R2.png")
+> plotErrors(errR, nominalQ=TRUE)
+> dev.off()
+
+###############################################################
+###############################################################
+# 5. Dereplication.
+#
+#    Note that this step also needs adjustments to the code for
+#    the samples that ended up with 0 reads.
+
+> derepFs <- derepFastq(filtFs, verbose=TRUE)
+> derepRs <- derepFastq(filtRs, verbose=TRUE)
+ 
+# Output looks something like this, for each file:
+# Dereplicating sequence entries in Fastq file:
+# /Path/to/filtered/9.40_R_filt.fastq.gz
+# Encountered 1818 unique sequences from 11865 total 
+#  sequences read.
+
+> class(derepFs)
+# [1] "list"
+
+> length(derepFs)
+> length(derepRs)
+
+> length(sample.names)
+
+# Need to adjust sample.names, 
+# remove names of the files that had zero reads,
+# because sample.names is used with the 
+# dereplicated data.
+> old.sample.names <- sample.names
+> sample.names<-sample.names[-inds.samples.to.remove]
+
+> length(sample.names)
+ 
+> names(derepFs) <- sample.names
+> names(derepRs) <- sample.names
+
+######################################################
+######################################################
+# 6.  Sample inference.
+#     Infer the sequence variants in each sample.
+
+> dadaFs <- dada(derepFs, err=errF, multithread=TRUE)
+> dadaRs <- dada(derepRs, err=errR, multithread=TRUE)
+
+#  These steps give output that looks like this:
+#  For each sample:
+## Sample 565 - 1389 reads in 599 unique sequences.
+## Sample 566 - 48 reads in 26 unique sequences.
+
+# Inspect the dada2 objects:
+> dada2Fs[[1]]
+
+# Get more information about these objects:
+# The dada-class gives information about the sequence variants
+# inferred from the unique sequences in each sample.
+> help("dada-class")
+
+#######################################################
+#######################################################
+# 7.  Merge the paired reads.
+
+> mergers <- mergePairs(dadaFs, derepFs,
+            dadaRs, derepRs, verbose=TRUE)
+
+#  The output looks like this, for each sample:
+## 1364 paired-reads (in 10 unique pairings) successfully merged
+##              out of 1389 (in 24 pairings) input.
+## 38 paired-reads (in 9 unique pairings) successfully merged
+##              out of 48 (in 14 pairings) input.
+
+> class(mergers)
+# [1] "list"
+> length(mergers)
+
+########################################################
+########################################################
+# 8. Construct a sequence table.
+
+> seqtab <- makeSequenceTable(mergers)
+
+#  Gives a warning message:
+## The sequences being tabled vary in length.
+
+# This is how to get the lengths of the sequences
+# from seqtab.
+> table(nchar(getSequences(seqtab)))
+
+# It is suggested that merged reads outside the expected
+# length (between 250 and 256 bp) shouldbe removed.
+# This is for 16S V4 515F-806R amplicons.
+# The region is expected to be 253 bp long. See:
+
+https://www.mothur.org/wiki/MiSeq_SOP
+
+# Remove merged reads that are not between 250-256 bp.
+seqtab2 <- seqtab[,nchar(colnames(seqtab)) %in% seq(250,256)]
+
+> class(seqtab2)
+# [1] "matrix"
+
+> dim(seqtab2)
+
+> table(nchar(getSequences(seqtab2)))
+
+#  The table looks something like this:
+##  250  251  252  253  254  255  256
+##    2    4 1601 5479  329   23    1
+
+#######################################################
+#######################################################
+# 9.  Remove chimeras.
+
+> seqtab.nochim <- removeBimeraDenovo(seqtab2, method="consensus",
+     multithread=TRUE, verbose=TRUE)
+
+# Output looks something like this:
+## Identified 3130 bimeras out of 7439 input sequences.
+
+> dim(seqtab.nochim)
+> sum(seqtab.nochim)/sum(seqtab2)
+
+> sum(seqtab2)
+
+# calculate no. of reads remaining as fraction of original
+# reads
+
+> sum(seqtab2)/[(wc -l reads_R1.fastq)/4]
+
+######################################################
+######################################################
+# 10. Track reads.
+
+# This also gives errors because of the files with 0 reads.
+# This needs fixing:
+
+# First attempt at running without fixing the problem
+# gives error message:
+
+## Warning message:
+## In cbind(out_44528_dada2, sapply(dadaFs, getN), 
+##         sapply(mergers,  :
+##  number of rows of result is not a multiple of 
+##       vector length (arg 2)
+
+# This is how to fix the problems:
+> dim(out_44528_dada2)
+
+# Keep the old version of the object in case
+# somehing goes wrong.
+> old.out_44528_dada2<-out_44528_dada2
+
+> out_44528_dada2<-out_44528_dada2[-inds.samples.to.remove,]
+> dim(out_44528_dada2)
+
+# Now proceed with the tracking code:
+# Essentially this gives the results of various steps
+# along the way, tracks how many reads were left
+# at each stage:
+
+> getN <- function(x) sum(getUniques(x))
+
+> track <- cbind(out_44528_dada2,
+               sapply(dadaFs, getN),
+               sapply(mergers, getN), 
+               rowSums(seqtab2), 
+               rowSums(seqtab.nochim))
+
+> colnames(track) <- c("input", "filtered", "denoised", 
+                       "merged", "tabled", "nonchim") 
+> rownames(track) <- sample.names
+
+# Save a table of the total reads at each stage:
+> track.col.sums.44528 <- apply(track,2,sum)
+> track.col.sums.44528
+
+# Output looks something like this.  
+##   input filtered denoised   merged   tabled  nonchim 
+## 7239723  5772489  5772489  5679667  5676788  5589435 
+
+#######################################################
+#######################################################
+# The next step is assigning taxonomy, which is covered
+# in pt3.
+
+##################################################################
+##################################################################
+# Save details of the run, R objects and commands.
+
+> sessionInfo()
+> savehistory("dada2_urobiome_44528_pt2_20180520.Rhistory")
+> save.image("dada2_urobiome_44528_pt2_20180520.RData")
+
+##################################################################
+##################################################################
+
